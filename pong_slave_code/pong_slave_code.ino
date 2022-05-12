@@ -10,6 +10,8 @@ char commandChar; //command character
 String valueFromChars; //value constructed from the chars
 char c; //just a simple character
 bool printMessage; // bool that allows to print out the received values from Master
+int bytesToRead;
+
 //------------Variables for the stepping----------------------------------------
 char receivedCommand; //received command charater
 long receivedValue; //value from the computer
@@ -36,12 +38,13 @@ void loop() {
 }   
 
 
-void dataProcess(String receivedString) {  
-    delay(2000); //Waiting time is necessary, otherwise the software doesn't read and arrange the variables properly
-    
-    commandChar = receivedString.charAt(0); //command is the first character of the string from the Master  
-    for (int i = 1; i < receivedString.length(); i++) {   // i starts from the index 1, since the index 0 is the command character    
-        valueFromChars += receivedString.charAt(i); //the value temporary variable is built up one by one in each iteration 
+void dataProcess(String receivedStringForProcess) {  
+    //delay(2000); //Waiting time is necessary, otherwise the software doesn't read and arrange the variables properly
+    receivedString = "";    // resets the variable which stores the incoming command
+    receivedCommand = receivedStringForProcess.charAt(0); //command is the first character of the string from the Master  
+    Serial.println(receivedStringForProcess);
+    for (int i = 1; i < receivedStringForProcess.length(); i++) {   // i starts from the index 1, since the index 0 is the command character    
+        valueFromChars += receivedStringForProcess.charAt(i); //the value temporary variable is built up one by one in each iteration 
     }
     receivedValue = valueFromChars.toFloat();   //the receivedValue is a string, so it has to be converted into a number         
     switch (receivedCommand) {   //we check what is the command
@@ -91,16 +94,19 @@ void dataProcess(String receivedString) {
 }
 
 String receiveEvent(int NumberOfBytes) {  
-    receivedString = "";    // resets the variable which stores the incoming command
-    while (Wire.available()) {    // loop through all received character from the Master
+    //delay(100);
+    //bytesToRead = Wire.available();
+    //Serial.println("reading " + String(bytesToRead) + " bytes");
+    while (Wire.available() > 0) {
         c = Wire.read();// receive byte as a character    
-        if(c == 'n') {    //if we get the letter n, we do not fool around but immediately shut down the motor
-            Serial.println("STOPPED");
-            break;    //quick way to not finish the whole reading when we want to stop
-        } 
+        Serial.println(c);
         receivedString = receivedString + c; //appending the characters in order to build a whole string
-    }    
-    dataProcess(receivedString);
+        Serial.println(receivedString);
+    }
+    if (receivedString.substring(receivedString.length()-2) == "10") {
+        Serial.println("sending " + receivedString + " for processing");
+        dataProcess(receivedString);
+    }
 }
 
 void RunTheMotor() {    //method for the motor
