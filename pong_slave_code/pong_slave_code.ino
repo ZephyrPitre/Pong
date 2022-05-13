@@ -3,18 +3,16 @@
 
 // Stepper driver pinouts
 //AccelStepper stepper(1, 11, 12); //With EasyDriver
-AccelStepper stepper(1, 8, 9);  //With TB6600
+AccelStepper stepper(AccelStepper::DRIVER, 8, 9);  //With TB6600
 
-#define stepsPerMM = 17
+#define stepsPerMM 17
 
 //------------Variables for the stepping----------------------------------------
-char    c;                         // stores the individual characters as they are received from the master
-String  receivedString;     
-char    receivedCommand;           //received command charater
-long    receivedValue;             //value from the computer
-int     numberOfSteps;             //number of steps which will be passed to the AccelStepper library, determined by command, 200 steps / rotation with full steps
-bool    steppingComplete = true;
-int     index;
+char    c;                          // stores the individual characters as they are received from the master
+char    receivedCommand;            // received command charater
+long    receivedValue;              // value from the computer
+int     numberOfSteps;              // number of steps which will be passed to the AccelStepper library, determined by command, 200 steps / rotation with full steps
+bool    steppingComplete = true;    // false while stepping is occuring. Used to print end position message
 
 
 
@@ -34,14 +32,22 @@ void setup() {
 
 void loop() {
     runMotor(); 
-    delay(1);
+    //delay(1);
 }   
 
 
 void dataProcess(char charsToProcess[]) {  
     receivedCommand = charsToProcess[0];          //command is the first character of the string from the Master  
     charsToProcess[0] = '0';
-    receivedValue = atol(charsToProcess);     //the value temporary variable is built up one by one in each iteration
+    
+    if (charsToProcess[1] == '-') {
+        charsToProcess[1] = '0';
+        receivedValue = atol(charsToProcess);     //the value temporary variable is built up one by one in each iteration
+        receivedValue = -receivedValue;
+    }
+    else {
+        receivedValue = atol(charsToProcess);     //the value temporary variable is built up one by one in each iteration
+    }
     Serial.print("command: ");
     Serial.println(receivedCommand);
     Serial.print("value: ");
@@ -49,12 +55,12 @@ void dataProcess(char charsToProcess[]) {
     switch (receivedCommand) {                              //we check what is the command
   
         case 'R':                                           //R uses the move() function of the AccelStepper library, which means that it moves relatively to the current position.           
-            Serial.println("Relative direction.");          //print the action
+            //Serial.println("Relative direction.");          //print the action
             RotateRelative(receivedValue);                               //Run the function, example: R2000 - 2000 steps (5 revolution with 400 step/rev microstepping)
             break;
         
         case 'r':                                           //r uses the moveTo() function of the AccelStepper library, which means that it moves absolutely to the current position.  
-            Serial.println("Absolute position.");           //print the action
+            //Serial.println("Absolute position.");           //print the action
             RotateAbsolute(receivedValue);                               //Run the function, example: r800 - It moves to the position which is located at +800 steps away from 0.
             break;
         
@@ -85,13 +91,11 @@ void dataProcess(char charsToProcess[]) {
 }
 
 void receiveEvent(int bytesToReceive) {
-    Serial.println("ready to receive");
-    receivedString = "";
     char receivedChars[bytesToReceive - 1];
     for (int i = 0; i < bytesToReceive - 1; i++) {
         receivedChars[i] = Wire.read();
     }
-    Wire.read();
+    Wire.read();    // reads the terminating char at the end of the transmission
     dataProcess(receivedChars);
 }
 
@@ -99,9 +103,9 @@ void runMotor() {    //method for the motor
     stepper.enableOutputs(); //enable pins
     if (!stepper.run() && steppingComplete == false) {
         steppingComplete = true;
-        Serial.println("run complete!");
         Serial.print("Position: "); 
-        Serial.println(stepper.currentPosition()); // print pos -> this will show you the latest position from the origin 
+        Serial.println(stepper.currentPosition() / stepsPerMM); // print pos -> this will show you the latest position from the origin 
+        Serial.println();
     }
     stepper.disableOutputs(); // disable power
     
@@ -116,13 +120,15 @@ void masterFeedback() {    //Send a feedback to the Master
 }
 
 void RotateRelative(long steps) {    //We move X steps from the current position of the stepper motor in a given direction (+/-).  
-    stepper.move(steps); //set relative distance and direction
+    Serial.println("rotating ");
+    Serial.println(steps);
+    stepper.move(steps * stepsPerMM); //set relative distance and direction
     steppingComplete = false;
     runMotor();
 }
 
 void RotateAbsolute(long steps) {    //We move to an absolute position. 
-    stepper.moveTo(steps); //set absolute distance  
+    stepper.moveTo(steps * stepsPerMM); //set absolute distance  
     steppingComplete = false;
     runMotor();
 }
