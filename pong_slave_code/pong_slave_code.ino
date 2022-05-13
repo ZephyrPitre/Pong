@@ -3,34 +3,32 @@
 
 // Stepper driver pinouts
 //AccelStepper stepper(1, 11, 12); //With EasyDriver
-AccelStepper stepper(1, 8, 9); //With TB6600
+AccelStepper stepper(1, 8, 9);  //With TB6600
 
-//------------Variables for the data processing---------------------------------
-char commandChar; //command character
-String valueFromChars; //value constructed from the chars
-char c; //just a simple character
-bool printMessage; // bool that allows to print out the received values from Master
-int bytesToRead;
+#define stepsPerMM = 17
 
 //------------Variables for the stepping----------------------------------------
-char receivedCommand; //received command charater
-long receivedValue; //value from the computer
-long NumberOfSteps; //number of steps which will be passed to the AccelStepper library
-String receivedString; //the full string received from the Master - this will be split up
-bool runMotor = false;
+char    c;                         // stores the individual characters as they are received from the master
+String  receivedString;     
+char    receivedCommand;           //received command charater
+int     receivedValue;             //value from the computer
+int     numberOfSteps;             //number of steps which will be passed to the AccelStepper library, determined by command, 200 steps / rotation with full steps
+int     index;
+
+
 
 void setup() {
     Serial.begin(9600);  
     Serial.println("This is the Slave Arduino that is receiving the commands from the Master");
   
-    //setting up some default values for (max) speed and maximum acceleration
-    stepper.setSpeed(2000);   //SPEED = Steps / second, this is the speed used with runSpeed().
-    stepper.setMaxSpeed(2000);    //SPEED = Steps / second
-    stepper.setAcceleration(500);   //ACCELERATION = Steps /(second)^2 (1000)
-    stepper.disableOutputs();   //disable outputs, so the motor is not getting warm (no current)
+                                                            //setting up some default values for (max) speed and maximum acceleration
+    stepper.setSpeed(2000);                                 //SPEED = Steps / second, this is the speed used with runSpeed().
+    stepper.setMaxSpeed(2000);                              //SPEED = Steps / second
+    stepper.setAcceleration(500);                           //ACCELERATION = Steps /(second)^2 (1000)
+    stepper.disableOutputs();                               //disable outputs, so the motor is not getting warm (no current)
     
-    Wire.begin(8);    // join i2c bus with address #8  
-    Wire.onReceive(receiveEvent);   // register I2C event
+    Wire.begin(8);                                          // join i2c bus with address #8  
+    Wire.onReceive(receiveEvent);                           // register I2C event
 }
 
 void loop() {    
@@ -38,75 +36,68 @@ void loop() {
 }   
 
 
-void dataProcess(String receivedStringForProcess) {  
-    //delay(2000); //Waiting time is necessary, otherwise the software doesn't read and arrange the variables properly
-    receivedString = "";    // resets the variable which stores the incoming command
-    receivedCommand = receivedStringForProcess.charAt(0); //command is the first character of the string from the Master  
-    Serial.println(receivedStringForProcess);
-    for (int i = 1; i < receivedStringForProcess.length(); i++) {   // i starts from the index 1, since the index 0 is the command character    
-        valueFromChars += receivedStringForProcess.charAt(i); //the value temporary variable is built up one by one in each iteration 
-    }
-    receivedValue = valueFromChars.toFloat();   //the receivedValue is a string, so it has to be converted into a number         
-    switch (receivedCommand) {   //we check what is the command
+void dataProcess(String charsToProcess) {  
+    receivedCommand = 'R';          //command is the first character of the string from the Master  
+    receivedValue = 100; 
+    Serial.print("received ");
+    Serial.println(charsToProcess);
+    //receivedCommand = charsToProcess[0];          //command is the first character of the string from the Master  
+    //charsToProcess[0] = '0';
+    //receivedValue = atoi(charsToProcess);     //the value temporary variable is built up one by one in each iteration 
+    switch (receivedCommand) {                              //we check what is the command
   
-        case 'R': //R uses the move() function of the AccelStepper library, which means that it moves relatively to the current position.           
-            Serial.println("Relative direction."); //print the action
-            NumberOfSteps = receivedValue; //here, the receivedValue is used as the number of steps
-            RotateRelative(); //Run the function, example: R2000 - 2000 steps (5 revolution with 400 step/rev microstepping)
-            runMotor = true;
+        case 'R':                                           //R uses the move() function of the AccelStepper library, which means that it moves relatively to the current position.           
+            Serial.println("Relative direction.");          //print the action
+            numberOfSteps = receivedValue;                  //here, the receivedValue is in mm, max value of 999
+            RotateRelative();                               //Run the function, example: R2000 - 2000 steps (5 revolution with 400 step/rev microstepping)
             break;
         
-        case 'r': //r uses the moveTo() function of the AccelStepper library, which means that it moves absolutely to the current position.  
-            Serial.println("Absolute position."); //print the action
-            NumberOfSteps = receivedValue; //here, the receivedValue is used as the number of steps
-            RotateAbsolute(); //Run the function, example: r800 - It moves to the position which is located at +800 steps away from 0.
-            runMotor = true;
+        case 'r':                                           //r uses the moveTo() function of the AccelStepper library, which means that it moves absolutely to the current position.  
+            Serial.println("Absolute position.");           //print the action
+            numberOfSteps = receivedValue;                  //here, the receivedValue is used as the number of steps
+            RotateAbsolute();                               //Run the function, example: r800 - It moves to the position which is located at +800 steps away from 0.
             break;
         
-        case 'A': // Updates acceleration        
-            stepper.setAcceleration(receivedValue); //update the value of the variable - receivedValue is the acceleration 
-            Serial.print("New acceleration value: "); //confirm update by message
-            Serial.println(receivedValue); //confirm update by message
+        case 'A':                                           // Updates acceleration        
+            stepper.setAcceleration(receivedValue);         //update the value of the variable - receivedValue is the acceleration 
+            Serial.print("New acceleration value: ");       //confirm update by message
+            Serial.println(receivedValue);                  //confirm update by message
             break;
         
-        case 'V': // Updates speed
-            stepper.setSpeed(receivedValue); //update the value of the variable - receivedValue is the speed 
-            Serial.print("New speed value: "); //confirm update by message
-            Serial.println(receivedValue); //confirm update by message
+        case 'V':                                           // Updates speed
+            stepper.setSpeed(receivedValue);                //update the value of the variable - receivedValue is the speed 
+            Serial.print("New speed value: ");              //confirm update by message
+            Serial.println(receivedValue);                  //confirm update by message
             break;
         
-        case 'v': // Updates Max speed
-            stepper.setMaxSpeed(receivedValue); //update the value of the variable - receivedValue is the max speed 
-            Serial.print("New max speed value: "); //confirm update by message
-            Serial.println(receivedValue); //confirm update by message
+        case 'v':                                           // Updates Max speed
+            stepper.setMaxSpeed(receivedValue);             //update the value of the variable - receivedValue is the max speed 
+            Serial.print("New max speed value: ");          //confirm update by message
+            Serial.println(receivedValue);                  //confirm update by message
             break;
         
         case 'U':
-            stepper.setCurrentPosition(0); //Reset current position. "new home"      
-            Serial.print("New home position is set."); //Print message
-            Serial.println(stepper.currentPosition()); //Check position after reset.
+            stepper.setCurrentPosition(0);                  //Reset current position. "new home"      
+            Serial.print("New home position is set.");      //Print message
+            Serial.println(stepper.currentPosition());      //Check position after reset.
             break;        
-        
-        default:
-            //skip
-            break;
-      } 
+    }
 }
 
-String receiveEvent(int NumberOfBytes) {  
-    //delay(100);
-    //bytesToRead = Wire.available();
-    //Serial.println("reading " + String(bytesToRead) + " bytes");
-    while (Wire.available() > 0) {
-        c = Wire.read();// receive byte as a character    
+void receiveEvent(int bytesToReceive) {
+    Serial.println("receiving " + String(bytesToReceive));
+    receivedString = "";
+    char receivedChars[bytesToReceive - 1];
+    while (Wire.available() > 1) {
+        Serial.println("while looping");
+        c = Wire.read();
         Serial.println(c);
-        receivedString = receivedString + c; //appending the characters in order to build a whole string
+        receivedString = receivedString + c;
         Serial.println(receivedString);
     }
-    if (receivedString.substring(receivedString.length()-2) == "10") {
-        Serial.println("sending " + receivedString + " for processing");
-        dataProcess(receivedString);
-    }
+    Serial.print("sending: ");
+    Serial.println(receivedString);
+    //dataProcess(String(receivedChars));
 }
 
 void RunTheMotor() {    //method for the motor
@@ -125,11 +116,11 @@ void masterFeedback() {    //Send a feedback to the Master
 }
 
 void RotateRelative() {    //We move X steps from the current position of the stepper motor in a given direction (+/-).  
-    stepper.move(NumberOfSteps); //set relative distance and direction
+    stepper.move(numberOfSteps); //set relative distance and direction
     RunTheMotor();
 }
 
 void RotateAbsolute() {    //We move to an absolute position. 
-    stepper.moveTo(NumberOfSteps); //set absolute distance  
+    stepper.moveTo(numberOfSteps); //set absolute distance  
     RunTheMotor();
 }

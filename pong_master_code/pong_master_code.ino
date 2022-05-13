@@ -22,7 +22,7 @@ void setup() {
 
 void loop() {
     if (Serial.available() > 0) {
-        SendDataToSlave(String(Serial.read()));
+        SendDataToSlave(Serial.readString());
     }
     doSomething();    // we do something
 }
@@ -32,6 +32,7 @@ void SendDataToSlave(String receivedCommand) {
     Serial.print("Submitted command: ");    // Checking what we send to the Slave by showing it on the terminal
     Serial.println(receivedCommand);                     
     Wire.write(receivedCommand.c_str());    // Sending the string to the Slave  
+    delay(1000);
     Wire.endTransmission();    // Finish transmitting
 }
 
