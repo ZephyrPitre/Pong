@@ -16,30 +16,23 @@ long    receivedValue;              // value from the computer
 int     numberOfSteps;              // number of steps which will be passed to the AccelStepper library, determined by command, 200 steps / rotation with full steps
 bool    steppingComplete = true;    // false while stepping is occuring. Used to print end position message
 long    time1;
-bool    rightLimitSet = true;
-
-
 
 void setup() {
     Serial.begin(9600);  
     Serial.println("This is the Slave Arduino that is receiving the commands from the Master");
   
                                                             //setting up some default values for (max) speed and maximum acceleration
-    stepper.setSpeed(2000);                                 //SPEED = Steps / second, this is the speed used with runSpeed().
-    stepper.setMaxSpeed(1500);                              //SPEED = Steps / second. max speed should not exceed 1500 when full stepping at 9V 1.5A
-    stepper.setAcceleration(1000);                           //ACCELERATION = Steps /(second)^2 (1000). not sure what the max acceleration without losing steps is
-    stepper.disableOutputs();                               //disable outputs, so the motor is not getting warm (no current)
+    stepper.setSpeed(6000);                                 //SPEED = Steps / second, this is the speed used with runSpeed().
+    stepper.setMaxSpeed(6000);                              //SPEED = Steps / second. max speed should not exceed 1500 when full stepping at 9V 1.5A
+    stepper.setAcceleration(4000);                           //ACCELERATION = Steps /(second)^2 (1000). not sure what the max acceleration without losing steps is
+    //stepper.disableOutputs();                               //disable outputs, so the motor is not getting warm (no current) * not sure if this actually does anything
     
     Wire.begin(8);                                          // join i2c bus with address #8  
     Wire.onReceive(receiveEvent);                           // register I2C event
 }
 
 void loop() {
-    if (!rightLimitSet) {
-        limitProtocol();
-    }
     runMotor(); 
-    //delay(1);
 }   
 
 
@@ -97,7 +90,6 @@ void dataProcess(char charsToProcess[]) {
 
         case 'L':
             Serial.println("setting right limit");
-            rightLimitSet = false;
             limitProtocol();
             
             break; 
@@ -115,13 +107,10 @@ void receiveEvent(int bytesToReceive) {
 }
 
 void runMotor() {    //method for the motor
-    //stepper.enableOutputs(); //enable pins
     if (!stepper.run() && steppingComplete == false) {
-        steppingComplete = true;
         Serial.print("Position: "); 
         Serial.println(stepper.currentPosition() / stepsPerMM); // print pos -> this will show you the latest position from the origin 
         Serial.println();
-        //masterFeedback();    // tells the master that stepping is complete
     }
 
 }
@@ -147,13 +136,10 @@ void rotateAbsolute(long steps) {    //We move to an absolute position.
 }
 
 void limitProtocol() {      // moves carriages until limit switches are set and then initiallizes new home positions
-    if (digitalRead(rightLimit)) {   // until limit is hit, move to the right 1mm
+    while (digitalRead(rightLimit) && !stepper.run()) {   // until limit is hit, move to the right 1mm
         rotateRelative(-1);
     }
-    else {
-        rightLimitSet = true;
-        stepper.setCurrentPosition(-5*stepsPerMM);
-        rotateAbsolute(0);
-        Serial.println("limit reached");
-    }    
+    stepper.setCurrentPosition(-5*stepsPerMM);
+    rotateAbsolute(0);
+    Serial.println("limit reached"); 
 }
