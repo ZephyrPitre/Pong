@@ -35,22 +35,22 @@ void interpretCommand(String receivedCommand) {     // decides between moving th
             limitProtocol();
             break;
 */
-        case 'A':
+        case 'E':
             Serial.println("Right piston up");
             digitalWrite(rightRelay, HIGH);
             break;
 
-        case 'B':
+        case 'F':
             Serial.println("Right piston down");
             digitalWrite(rightRelay, LOW);
             break;
 
-        case 'C':
+        case 'G':
             Serial.println("Left piston up");
             digitalWrite(leftRelay, HIGH);
             break;
 
-        case 'D':
+        case 'H':
             Serial.println("Left piston down");
             digitalWrite(leftRelay, LOW);
             break;

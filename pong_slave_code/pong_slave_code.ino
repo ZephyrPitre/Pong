@@ -3,11 +3,11 @@
 
 // Stepper driver pinouts
 //AccelStepper stepper(1, 11, 12); //With EasyDriver
-AccelStepper stepper(AccelStepper::DRIVER, 8, 9);  //With TB6600
+AccelStepper stepper(AccelStepper::DRIVER, 8, 9);  //With TB6600, microstepping 800 steps per rev
 #define rightLimit  4
 #define leftLimit   5
 
-#define stepsPerMM -17
+#define stepsPerMM -68
 
 //------------Variables for the stepping----------------------------------------
 char    c;                          // stores the individual characters as they are received from the master
@@ -27,7 +27,7 @@ void setup() {
                                                             //setting up some default values for (max) speed and maximum acceleration
     stepper.setSpeed(2000);                                 //SPEED = Steps / second, this is the speed used with runSpeed().
     stepper.setMaxSpeed(1500);                              //SPEED = Steps / second. max speed should not exceed 1500 when full stepping at 9V 1.5A
-    stepper.setAcceleration(250);                           //ACCELERATION = Steps /(second)^2 (1000). not sure what the max acceleration without losing steps is
+    stepper.setAcceleration(1000);                           //ACCELERATION = Steps /(second)^2 (1000). not sure what the max acceleration without losing steps is
     stepper.disableOutputs();                               //disable outputs, so the motor is not getting warm (no current)
     
     Wire.begin(8);                                          // join i2c bus with address #8  
