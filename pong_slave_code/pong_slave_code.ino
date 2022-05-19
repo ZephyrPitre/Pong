@@ -7,7 +7,11 @@ AccelStepper stepper(AccelStepper::DRIVER, 8, 9);  //With TB6600, microstepping 
 #define rightLimit  4
 #define leftLimit   5
 
-#define stepsPerMM -68
+// stepper distance constants
+#define microstepsPerRev    800             // update this value if microstepping is adjusted
+#define pulleyDia           12              // pulley diameter in mm
+#define pulleyCirc          pulleyDia * 3.14
+#define stepsPerMM          microstepsPerRev / pulleyCirc
 
 //------------Variables for the stepping----------------------------------------
 char    c;                          // stores the individual characters as they are received from the master
@@ -21,11 +25,10 @@ void setup() {
     Serial.begin(9600);  
     Serial.println("This is the Slave Arduino that is receiving the commands from the Master");
   
-                                                            //setting up some default values for (max) speed and maximum acceleration
-    stepper.setSpeed(6000);                                 //SPEED = Steps / second, this is the speed used with runSpeed().
-    stepper.setMaxSpeed(6000);                              //SPEED = Steps / second. max speed should not exceed 1500 when full stepping at 9V 1.5A
-    stepper.setAcceleration(4000);                           //ACCELERATION = Steps /(second)^2 (1000). not sure what the max acceleration without losing steps is
-    //stepper.disableOutputs();                               //disable outputs, so the motor is not getting warm (no current) * not sure if this actually does anything
+                                                          //setting up some default values for (max) speed and maximum acceleration
+    stepper.setSpeed(300 / pulleyCirc * microstepsPerRev);                                  //SPEED = Steps / second, this is the speed used with runSpeed().
+    stepper.setMaxSpeed(500 / pulleyCirc * microstepsPerRev);                               //SPEED = Steps / second. max speed should not exceed 1500 when full stepping at 9V 1.5A
+    stepper.setAcceleration(25000 / pulleyCirc * microstepsPerRev);                         // Acceleration
     
     Wire.begin(8);                                          // join i2c bus with address #8  
     Wire.onReceive(receiveEvent);                           // register I2C event
@@ -136,7 +139,8 @@ void rotateAbsolute(long steps) {    //We move to an absolute position.
 }
 
 void limitProtocol() {      // moves carriages until limit switches are set and then initiallizes new home positions
-    while (digitalRead(rightLimit) && !stepper.run()) {   // until limit is hit, move to the right 1mm
+    while (digitalRead(rightLimit)) {   // until limit is hit, move the right carriage 1mm at a time
+        while (stepper.run()) {}  
         rotateRelative(-1);
     }
     stepper.setCurrentPosition(-5*stepsPerMM);
