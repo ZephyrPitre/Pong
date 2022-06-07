@@ -32,6 +32,9 @@ void setup() {
     
     Wire.begin(8);                                          // join i2c bus with address #8  
     Wire.onReceive(receiveEvent);                           // register I2C event
+    
+    pinMode(rightLimit, INPUT_PULLUP);
+    pinMode(leftLimit, INPUT_PULLUP);
 }
 
 void loop() {
@@ -46,10 +49,11 @@ void dataProcess(char charsToProcess[]) {
     if (charsToProcess[1] == '-') {
         charsToProcess[1] = '0';
         receivedValue = atol(charsToProcess);     //the value temporary variable is built up one by one in each iteration
-        receivedValue = -receivedValue;
+        
     }
     else {
         receivedValue = atol(charsToProcess);     //the value temporary variable is built up one by one in each iteration
+        receivedValue = -receivedValue;
     }
     Serial.print("command: ");
     Serial.println(receivedCommand);
@@ -124,7 +128,7 @@ void masterFeedback() {    //Send a feedback to the Master
     Wire.endTransmission();  
 }
 
-void rotateRelative(long mmToMove) {    //We move X steps from the current position of the stepper motor in a given direction (+/-).  
+void rotateRelative(float mmToMove) {    //We move X steps from the current position of the stepper motor in a given direction (+/-).  
     Serial.println("rotating ");
     Serial.println(mmToMove);
     stepper.move(mmToMove * stepsPerMM); //set relative distance and direction
@@ -132,16 +136,16 @@ void rotateRelative(long mmToMove) {    //We move X steps from the current posit
     runMotor();
 }
 
-void rotateAbsolute(long steps) {    //We move to an absolute position. 
-    stepper.moveTo(steps * stepsPerMM); //set absolute distance  
+void rotateAbsolute(float mmPosition) {    //We move to an absolute position. 
+    stepper.moveTo(mmPosition * stepsPerMM); //set absolute distance  
     steppingComplete = false;
     runMotor();
 }
 
 void limitProtocol() {      // moves carriages until limit switches are set and then initiallizes new home positions
-    while (digitalRead(rightLimit)) {   // until limit is hit, move the right carriage 1mm at a time
+    while (digitalRead(rightLimit) == HIGH) {   // until limit is hit, move the right carriage 1mm at a time
         while (stepper.run()) {}  
-        rotateRelative(-1);
+        rotateRelative(0.1);
     }
     stepper.setCurrentPosition(-5*stepsPerMM);
     rotateAbsolute(0);
