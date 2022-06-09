@@ -8,15 +8,15 @@ AccelStepper stepper(AccelStepper::DRIVER, 8, 9);  //With TB6600, microstepping 
 #define leftLimit   5
 
 // stepper distance constants
-#define microstepsPerRev    800             // update this value if microstepping is adjusted
-#define pulleyDia           12              // pulley diameter in mm
+#define microstepsPerRev    800             // update this value if microstepping is adjusted. 800 microsteps per rev, for some reason we need to divide by 10
+#define pulleyDia           12.2            // pulley diameter in mm
 #define pulleyCirc          pulleyDia * 3.14
-#define stepsPerMM          microstepsPerRev / pulleyCirc
+#define stepsPerMM          -microstepsPerRev / pulleyCirc  // negative sign flips the axis so that coutner clockwise is positive
 
 //------------Variables for the stepping----------------------------------------
 char    c;                          // stores the individual characters as they are received from the master
 char    receivedCommand;            // received command charater
-long    receivedValue;              // value from the computer
+float   receivedValue;              // value from the computer
 int     numberOfSteps;              // number of steps which will be passed to the AccelStepper library, determined by command, 200 steps / rotation with full steps
 bool    steppingComplete = true;    // false while stepping is occuring. Used to print end position message
 long    time1;
@@ -26,7 +26,7 @@ void setup() {
     Serial.println("This is the Slave Arduino that is receiving the commands from the Master");
   
                                                           //setting up some default values for (max) speed and maximum acceleration
-    stepper.setSpeed(300 / pulleyCirc * microstepsPerRev);                                  //SPEED = Steps / second, this is the speed used with runSpeed().
+    stepper.setSpeed(10 / pulleyCirc * microstepsPerRev);                                  //SPEED = Steps / second, this is the speed used with runSpeed().
     stepper.setMaxSpeed(500 / pulleyCirc * microstepsPerRev);                               //SPEED = Steps / second. max speed should not exceed 1500 when full stepping at 9V 1.5A
     stepper.setAcceleration(25000 / pulleyCirc * microstepsPerRev);                         // Acceleration
     
@@ -48,13 +48,14 @@ void dataProcess(char charsToProcess[]) {
     
     if (charsToProcess[1] == '-') {
         charsToProcess[1] = '0';
-        receivedValue = atol(charsToProcess);     //the value temporary variable is built up one by one in each iteration
+        receivedValue = atof(charsToProcess);     //the value temporary variable is built up one by one in each iteration
+        receivedValue = -receivedValue;
         
     }
     else {
-        receivedValue = atol(charsToProcess);     //the value temporary variable is built up one by one in each iteration
-        receivedValue = -receivedValue;
+        receivedValue = atof(charsToProcess);     //the value temporary variable is built up one by one in each iteration
     }
+    receivedValue = receivedValue / 10; // not sure why this is necessary
     Serial.print("command: ");
     Serial.println(receivedCommand);
     Serial.print("value: ");
@@ -143,9 +144,9 @@ void rotateAbsolute(float mmPosition) {    //We move to an absolute position.
 }
 
 void limitProtocol() {      // moves carriages until limit switches are set and then initiallizes new home positions
-    while (digitalRead(rightLimit) == HIGH) {   // until limit is hit, move the right carriage 1mm at a time
+    while (digitalRead(rightLimit) == LOW) {   // until limit is hit, move the right carriage 1mm at a time
         while (stepper.run()) {}  
-        rotateRelative(0.1);
+        rotateRelative(-1);
     }
     stepper.setCurrentPosition(-5*stepsPerMM);
     rotateAbsolute(0);

@@ -6,15 +6,13 @@
 #define rightRelay  2
 #define leftRelay   3
 
-
-
-
 long time1;
 bool rightStepping;
 
 void setup() {
     Serial.begin(9600);                                                                             //Start Serial
     Serial.println("This is the Master Arduino that is sending the commands to the Slave");
+    Serial.println(atof(char [255]));
     Wire.begin(8);                                                                                  // Join the i2c bus 
 //    Wire.onReceive(receiveEvent);                                                                   // register I2C event
     //pinMode(rightLimit, INPUT_PULLUP);
