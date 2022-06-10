@@ -5,6 +5,7 @@
 // Pins
 #define rightRelay  2
 #define leftRelay   3
+#define pressurePin A1
 
 long time1;
 bool rightStepping;
@@ -68,6 +69,11 @@ void controlRightMotor(String receivedMotorCommand) {
     Serial.println(micros() - time1);
 }
 
+int readPressure() {
+  int sensorVal=analogRead(A1);
+  return(sensorVal);
+
+}
 
 /*void receiveEvent(int bytesToReceive) {
     time1 = micros();

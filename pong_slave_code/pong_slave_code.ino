@@ -26,7 +26,7 @@ void setup() {
     Serial.println("This is the Slave Arduino that is receiving the commands from the Master");
   
                                                           //setting up some default values for (max) speed and maximum acceleration
-    stepper.setSpeed(10 / pulleyCirc * microstepsPerRev);                                  //SPEED = Steps / second, this is the speed used with runSpeed().
+    stepper.setSpeed(50 / pulleyCirc * microstepsPerRev);                                  //SPEED = Steps / second, this is the speed used with runSpeed().
     stepper.setMaxSpeed(500 / pulleyCirc * microstepsPerRev);                               //SPEED = Steps / second. max speed should not exceed 1500 when full stepping at 9V 1.5A
     stepper.setAcceleration(25000 / pulleyCirc * microstepsPerRev);                         // Acceleration
     
@@ -144,10 +144,12 @@ void rotateAbsolute(float mmPosition) {    //We move to an absolute position.
 }
 
 void limitProtocol() {      // moves carriages until limit switches are set and then initiallizes new home positions
-    while (digitalRead(rightLimit) == LOW) {   // until limit is hit, move the right carriage 1mm at a time
-        while (stepper.run()) {}  
-        rotateRelative(-1);
+    rotateRelative(-2000);
+    while (digitalRead(rightLimit) == LOW) {   // until limit is hit
+        stepper.runSpeed();     // moves at a constant speed
     }
+    stepper.stop();
+    while (stepper.run());      // run until stopped
     stepper.setCurrentPosition(-5*stepsPerMM);
     rotateAbsolute(0);
     Serial.println("limit reached"); 
